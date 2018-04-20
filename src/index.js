@@ -7,18 +7,18 @@ import { createStore } from 'redux';
 
 function Square(props) {
   return (
-    <button className="square" onClick={props.onClick}>
+    <button className="square" onClick={props.onSelected}>
       {props.value}
     </button>
   );
 }
 
 class Board extends React.Component {
-  renderSquare(i) {
+  renderSquare(cellIndex) {
     return (
       <Square
-        value={this.props.squares[i]}
-        onClick={() => this.props.onClick(i)}
+        value={this.props.squares[cellIndex]}
+        onSelected={() => this.props.onCellSelected(cellIndex)}
       />
     );
   }
@@ -73,8 +73,8 @@ class Game extends React.Component {
       }
     });
 
-    this.store.subscribe((state) => {
-      this.setState(state);
+    this.store.subscribe(() => {
+      this.setState(this.store.getState());
     });
 
     this.state = DEFAULT_STATE;
@@ -120,6 +120,7 @@ class Game extends React.Component {
     const step = action.payload;
 
     return {
+      history: state.history.slice(0, step + 1),
       stepNumber: step,
       xIsNext: (step % 2) === 0
     };
@@ -153,7 +154,7 @@ class Game extends React.Component {
         <div className="game-board">
           <Board
             squares={current.squares}
-            onClick={i => this.handleClick(i)}
+            onCellSelected={i => this.handleClick(i)}
           />
         </div>
         <div className="game-info">
@@ -180,11 +181,14 @@ function calculateWinner(squares) {
     [0, 4, 8],
     [2, 4, 6]
   ];
+
   for (let i = 0; i < lines.length; i++) {
     const [a, b, c] = lines[i];
+
     if (squares[a] && squares[a] === squares[b] && squares[a] === squares[c]) {
       return squares[a];
     }
   }
+
   return null;
 }
