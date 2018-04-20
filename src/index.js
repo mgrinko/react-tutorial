@@ -1,6 +1,8 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 import './index.css';
+import { createStore } from 'redux';
+
 
 
 function Square(props) {
@@ -47,7 +49,8 @@ class Board extends React.Component {
 class Game extends React.Component {
   constructor(props) {
     super(props);
-    this.state = {
+
+    const DEFAULT_STATE = {
       history: [
         {
           squares: Array(9).fill(null)
@@ -56,32 +59,70 @@ class Game extends React.Component {
       stepNumber: 0,
       xIsNext: true
     };
+
+    this.store = createStore((state = DEFAULT_STATE, action) => {
+      switch (action.type) {
+        case 'BUTTON_CLICKED':
+          return this._buttonClickedReducer(state, action);
+
+        case 'JUMP_TO':
+          return this._jumpToReducer(state, action);
+
+        default:
+          return state;
+      }
+    });
+
+    this.store.subscribe((state) => {
+      this.setState(state);
+    });
+
+    this.state = DEFAULT_STATE;
   }
 
   handleClick(i) {
-    const history = this.state.history.slice(0, this.state.stepNumber + 1);
-    const current = history[history.length - 1];
-    const squares = current.squares.slice();
-    if (calculateWinner(squares) || squares[i]) {
-      return;
-    }
-    squares[i] = this.state.xIsNext ? "X" : "O";
-    this.setState({
-      history: history.concat([
-        {
-          squares: squares
-        }
-      ]),
-      stepNumber: history.length,
-      xIsNext: !this.state.xIsNext
+    this.store.dispatch({
+      type: 'BUTTON_CLICKED',
+      payload: i,
     });
   }
 
+  _buttonClickedReducer(state, action) {
+    const history = state.history.slice(0, this.state.stepNumber + 1);
+    const current = history[history.length - 1];
+    const squares = current.squares.slice();
+    const i = action.payload;
+
+    if (calculateWinner(squares) || squares[i]) {
+      return state;
+    }
+
+    squares[i] = state.xIsNext ? 'X' : 'O';
+
+    return {
+      history: [
+        ...history,
+        { squares }
+      ],
+      stepNumber: history.length,
+      xIsNext: !state.xIsNext
+    };
+  }
+
   jumpTo(step) {
-    this.setState({
+    this.store.dispatch({
+      type: 'JUMP_TO',
+      payload: step,
+    });
+  }
+
+  _jumpToReducer(state, action) {
+    const step = action.payload;
+
+    return {
       stepNumber: step,
       xIsNext: (step % 2) === 0
-    });
+    };
   }
 
   render() {
@@ -102,9 +143,9 @@ class Game extends React.Component {
 
     let status;
     if (winner) {
-      status = "Winner: " + winner;
+      status = 'Winner: ' + winner;
     } else {
-      status = "Next player: " + (this.state.xIsNext ? "X" : "O");
+      status = 'Next player: ' + (this.state.xIsNext ? 'X' : 'O');
     }
 
     return (
